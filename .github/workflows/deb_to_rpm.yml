@@ -2,6 +2,9 @@
 name: Build znapzend RPM from latest Ubuntu .deb
 
 on:
+  push:
+    tags:
+      - '*'  # Trigger on any tag
   workflow_dispatch:          # run it by hand
 
 env:
