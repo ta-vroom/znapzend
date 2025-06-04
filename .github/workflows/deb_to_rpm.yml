@@ -68,6 +68,6 @@ jobs:
       - name: Release rpm files
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ github.workspace }}/${{ steps.build_rpm.outputs.package_name }}
+          files: ${{ github.workspace }}/znapzend-rpm.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
