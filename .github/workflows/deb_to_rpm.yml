@@ -1,0 +1,62 @@
+# .github/workflows/znapzend-deb-to-rpm.yml
+name: Build znapzend RPM from latest Ubuntu .deb
+
+on:
+  workflow_dispatch:          # run it by hand
+
+env:
+  REPOSITORY: oetiker/znapzend   # GitHub owner/repo we’re fetching from
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------- 0. (optional) check the runner out so we can store artifacts etc.
+      - name: Prepare workspace
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # -------- 1. Query the latest release and pick the Ubuntu .deb asset
+      - name: Locate Ubuntu .deb in latest release
+        id: fetch
+        run: |
+          set -euo pipefail
+
+          echo "🔍  Talking to GitHub API…"
+          asset_url=$(curl -sL "https://api.github.com/repos/${REPOSITORY}/releases/latest" \
+            | jq -r '
+                .assets[]
+                | select(.name | test("ubuntu.*amd64\\.deb$"))
+                | .browser_download_url
+              ' | head -n1)
+
+          if [[ -z "$asset_url" ]]; then
+            echo "::error::No Ubuntu amd64 .deb asset found in the latest release."
+            exit 1
+          fi
+
+          echo "  ↳ Found asset: $asset_url"
+          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
+
+      # -------- 2. Download the .deb
+      - name: Download .deb package
+        run: |
+          curl -L -o znapzend.deb "${{ steps.fetch.outputs.asset_url }}"
+          ls -lh znapzend.deb
+
+      # -------- 3. Install alien & friends, convert to RPM
+      - name: Convert to RPM with alien
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends alien rpm jq
+          alien -r znapzend.deb
+          ls -lh *.rpm
+
+      # -------- 4. Upload the RPM as a build artifact
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: znapzend-rpm
+          path: '*.rpm'
