@@ -48,6 +48,7 @@ jobs:
 
       # -------- 3. Install alien & friends, convert to RPM
       - name: Convert to RPM with alien
+        id: build_rpm
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends alien rpm jq
@@ -60,3 +61,11 @@ jobs:
         with:
           name: znapzend-rpm
           path: '*.rpm'
+
+      - name: Release rpm files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ github.workspace }}/${{ steps.build_rpm.outputs.package_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
